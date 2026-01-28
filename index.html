@@ -12,10 +12,8 @@
     <meta name="theme-color" content="#000000">
 
     <title>Sovereign Sports Architect</title>
-    <!-- Obsidian Style Favicon: High-Contrast Shield -->
-    <link rel="icon" href="data:image/svg+xml,<svg width='32' height='32' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><rect width='24' height='24' rx='6' fill='black'/><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='24' height='24' rx='6' fill='black'/%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
     
-    <!-- CRITICAL: Runtime Polyfill for Node.js globals -->
     <script>
         const polyfillProcess = { 
             env: { NODE_ENV: 'production' },
@@ -36,43 +34,32 @@
             background-color: #000000;
             color: #ffffff;
         }
-        
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        .animate-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-10px); }
+          75% { transform: translateX(10px); }
+        }
+        .animate-shake { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both; }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "zustand": "https://esm.sh/zustand@^5.0.10",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.91.1",
-    "zustand/": "https://esm.sh/zustand@^5.0.10/"
+    "react": "https://esm.sh/react@19.0.0",
+    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@19.0.0?deps=react@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client?deps=react@19.0.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.463.0?deps=react@19.0.0",
+    "zustand": "https://esm.sh/zustand@5.0.10?deps=react@19.0.0",
+    "zustand/middleware": "https://esm.sh/zustand@5.0.10/middleware?deps=react@19.0.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.47.10"
   }
 }
 </script>

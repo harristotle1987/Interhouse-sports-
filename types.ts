@@ -70,20 +70,6 @@ export interface Standing {
   global_rank: number;
 }
 
-export interface SportEvent {
-  id: string;
-  name: string;
-  type: EventType;
-  arm: SchoolArm;
-  status: 'PENDING' | 'LIVE' | 'COMPLETED';
-  isVersus?: boolean;
-  phase?: TournamentPhase;
-  participants?: string[]; // House IDs
-  winnerId?: string;
-  loserId?: string;
-  tournamentId?: string; 
-}
-
 export interface LiveMatch {
   id: string;
   event_name: string;
@@ -116,34 +102,6 @@ export interface LiveMatch {
   };
 }
 
-export interface NexusEvent extends LiveMatch {
-  match_id: string;
-  official_name: string;
-  official_id: string;
-  scoring_scale: string;
-}
-
-export interface BacklogEvent {
-  match_id: string;
-  event_name: string;
-  event_type: EventCategory;
-  scoring_logic: ScoringType;
-  school_arm: SchoolArm;
-  position: number;
-  house_name: string;
-  house_color: string;
-  points_contributed: number;
-  completion_timestamp: string;
-  officiating_admin: string;
-}
-
-export interface EventResult {
-  match_id: string;
-  house_id: string;
-  position: number;
-  points_awarded: number;
-}
-
 export interface ScoreEntry {
   id: string;
   eventId: string;
@@ -157,6 +115,27 @@ export interface ScoreEntry {
   house_id: string;
 }
 
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  arm?: SchoolArm;
+}
+
+// FIX: Added missing SportEvent interface used in constants and gemini service
+export interface SportEvent {
+  id: string;
+  name: string;
+  type: EventType;
+  arm: SchoolArm;
+  status: string;
+  phase?: TournamentPhase;
+  participants?: string[];
+  tournamentId?: string;
+}
+
+// FIX: Added missing Directive interface used in protocol service and member dashboard
 export interface Directive {
   id: string;
   type: DirectiveType;
@@ -164,18 +143,12 @@ export interface Directive {
   details: {
     title: string;
     description: string;
-    metrics?: Record<string, any>;
   };
-  status: 'PENDING' | 'COMPLETED';
   created_by: string;
+  status: string;
   created_at: string;
 }
 
-export interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  username?: string;
-  role: AdminRole;
-  arm?: SchoolArm;
-}
+// FIX: Added missing NexusEvent and BacklogEvent interfaces for MemberDashboard imports
+export interface NexusEvent extends LiveMatch {}
+export interface BacklogEvent extends LiveMatch {}

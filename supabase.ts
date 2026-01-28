@@ -23,4 +23,8 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KE
     autoRefreshToken: false,
     persistSession: false
   }
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> 3646b0d (System-Wide Restoration: Fixed Auth Instances, Zustand, and Super Admin CRUD)
