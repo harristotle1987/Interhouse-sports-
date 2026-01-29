@@ -1,28 +1,33 @@
 -- ==========================================================
--- SOVEREIGN CORE SQL [V137.0 - OBSIDIAN HARDENED]
--- RLS REPAIR, NEXUS MERGER & COLLISION NEUTRALIZATION
+-- SOVEREIGN CORE SQL [V138.0 - NEXUS UNIFIED]
+-- RLS REPAIR, NEXUS MERGER & RECURSION NEUTRALIZATION
 -- ==========================================================
 
--- 1. PURGE ALL POSSIBLE POLICY COLLISIONS
+-- 1. TERMINATE LEGACY SECURITY BUFFERS
 DROP POLICY IF EXISTS "Nexus Identity Control" ON public.profiles;
 DROP POLICY IF EXISTS "Sovereign Profile Authority" ON public.profiles;
 DROP POLICY IF EXISTS "Admin Profile Management" ON public.profiles;
 DROP POLICY IF EXISTS "Nexus Unified Management" ON public.matches;
 DROP POLICY IF EXISTS "Nexus Sector Management" ON public.matches;
+DROP POLICY IF EXISTS "Nexus Sector Empowerment" ON public.matches;
 DROP POLICY IF EXISTS "Sovereign Match CRUD" ON public.matches;
 DROP POLICY IF EXISTS "Sector Telemetry Commit" ON public.event_results;
 DROP POLICY IF EXISTS "Sector Result Authority" ON public.event_results;
+DROP POLICY IF EXISTS "Sector Result Provisioning" ON public.event_results;
 DROP POLICY IF EXISTS "Public Feed Access" ON public.matches;
 DROP POLICY IF EXISTS "Public Result Access" ON public.event_results;
 DROP POLICY IF EXISTS "Global Broadcast" ON public.matches;
 DROP POLICY IF EXISTS "Global Results" ON public.event_results;
+DROP POLICY IF EXISTS "Public Nexus Feed" ON public.matches;
+DROP POLICY IF EXISTS "Public Telemetry Feed" ON public.event_results;
+DROP POLICY IF EXISTS "Public Profile Registry" ON public.profiles;
 
--- 2. IDENTITY CORE: THE ARCHITECT BYPASS
--- Grants 2 Super Admins (super_admin, super_king) global power to provision Sub-Admins.
--- Prevents infinite recursion by reading directly from the JWT app_metadata.
+-- 2. IDENTITY CORE (PROFILES): ARCHITECT BYPASS
+-- Uses direct JWT app_metadata to prevent table recursion loops.
+-- Grants Super Admins global authority to create Sub-Admins and Members.
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Nexus Identity Control" ON public.profiles
+CREATE POLICY "Sovereign Profile Authority" ON public.profiles
 FOR ALL TO authenticated
 USING (
   (auth.jwt() -> 'app_metadata' ->> 'role' IN ('super_admin', 'super_king')) OR 
@@ -33,12 +38,13 @@ WITH CHECK (
   (auth.uid() = id)
 );
 
--- 3. THE NEXUS LEDGER (MERGED STAGE & PROVISIONS)
--- Resolves 'NEW ROW VIOLATES RLS' by validating the school_arm against the JWT claim.
--- Sub-Admins are strictly empowered within their sector (UPSS, CAM, CAGS).
+-- 3. THE NEXUS LEDGER (MATCHES / STAGE / PROVISIONS)
+-- Merges "Stage" and "Provisions" logic into a single atomic relation.
+-- Sub-Admins are empowered for full CRUD within their JWT-verified Sector.
+-- Resolves 401 Unauthorized and RLS_DENIAL on event creation.
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Nexus Unified Management" ON public.matches
+CREATE POLICY "Nexus Sector Empowerment" ON public.matches
 FOR ALL TO authenticated
 USING (
   (auth.jwt() -> 'app_metadata' ->> 'role' IN ('super_admin', 'super_king')) OR 
@@ -49,11 +55,11 @@ WITH CHECK (
   (school_arm::text = auth.jwt() -> 'app_metadata' ->> 'school_arm')
 );
 
--- 4. TELEMETRY RESULTS SECURITY
--- Sub-Admins can commit results ONLY if the parent match belongs to their sector.
+-- 4. TELEMETRY COMMITS (EVENT RESULTS)
+-- Hard-links result provisioning to the parent match's sector node.
 ALTER TABLE public.event_results ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Sector Result Authority" ON public.event_results
+CREATE POLICY "Sector Result Provisioning" ON public.event_results
 FOR ALL TO authenticated
 USING (
   (auth.jwt() -> 'app_metadata' ->> 'role' IN ('super_admin', 'super_king')) OR 
@@ -72,11 +78,10 @@ WITH CHECK (
   )
 );
 
--- 5. PUBLIC GUEST BROADCAST (SELECT ONLY)
-DROP POLICY IF EXISTS "Global Broadcast" ON public.matches;
-CREATE POLICY "Global Broadcast" ON public.matches FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Global Results" ON public.event_results;
-CREATE POLICY "Global Results" ON public.event_results FOR SELECT USING (true);
+-- 5. GLOBAL BROADCAST (READ-ONLY ACCESS)
+CREATE POLICY "Public Nexus Feed" ON public.matches FOR SELECT USING (true);
+CREATE POLICY "Public Telemetry Feed" ON public.event_results FOR SELECT USING (true);
+CREATE POLICY "Public Profile Registry" ON public.profiles FOR SELECT USING (true);
 
 -- 6. ARCHITECT SYSTEM PURGE (SUPER ADMIN ONLY)
 CREATE OR REPLACE FUNCTION purge_all_data()

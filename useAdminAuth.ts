@@ -21,7 +21,7 @@ export const useAdminAuth = () => {
       if (authError) throw authError;
       if (!authData?.user) throw new Error("IDENTITY_REJECTED");
 
-      // SECURE ROLE RESOLUTION: Prioritize app_metadata (non-user editable)
+      // SECURE ROLE RESOLUTION: Prioritize app_metadata (Server-side cryptographic claims)
       const appMeta = authData.user.app_metadata || {};
       const userMeta = authData.user.user_metadata || {};
       
@@ -32,12 +32,7 @@ export const useAdminAuth = () => {
         'member': AdminRole.MEMBER
       };
 
-      const rawRole = (appMeta.role || userMeta.role || '').toLowerCase();
-      if (!rawRole) {
-          await supabase.auth.signOut();
-          throw new Error("UNAUTHORIZED_ACCESS: ROLE_MISSING");
-      }
-
+      const rawRole = (appMeta.role || userMeta.role || 'member').toLowerCase();
       const finalRole = roleMap[rawRole] || AdminRole.MEMBER;
       const finalArm = (appMeta.school_arm || userMeta.school_arm || 'GLOBAL').toUpperCase() as SchoolArm;
 

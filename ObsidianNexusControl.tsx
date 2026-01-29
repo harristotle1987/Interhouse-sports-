@@ -14,9 +14,9 @@ import { supabase } from './supabase';
 import { HOUSES } from './constants';
 
 /**
- * OBSIDIAN NEXUS CONTROL [V134.0 - UNIFIED]
+ * OBSIDIAN NEXUS CONTROL [V139.0 - UNIFIED]
  * High-speed stream for immediate and staged event provisioning.
- * Integrated with Hardened RLS protocols.
+ * Integrated with Hardened JWT-Based RLS protocols.
  */
 const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => void }> = ({ admin, onEventCreated }) => {
   const [mode, setMode] = useState<'IMMEDIATE' | 'STAGED'>('IMMEDIATE');
@@ -34,6 +34,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
     setLoading(true);
     setStatus(null);
 
+    // The school_arm MUST match the Sub-Admin's cryptographic claim
     const payload: Partial<LiveMatch> = {
       school_arm: sectorArm,
       event_name: name.toUpperCase() || 'UNCLASSIFIED_TELEMETRY',
@@ -54,15 +55,15 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
     };
 
     try {
-      // Direct Atomic Insert (Signal-Free)
+      // Direct Atomic Insert
       const { error } = await supabase.from('matches').insert(payload);
       
       if (error) {
-        if (error.code === '42501') throw new Error("RLS_DENIAL: Sector permission mismatch.");
+        if (error.code === '42501') throw new Error("SECTOR_DENIAL: Access denied for this node.");
         throw error;
       }
 
-      setStatus({ type: 'success', message: `INITIALIZED: Sequence committed to ${mode} buffer.` });
+      setStatus({ type: 'success', message: `UPLINK_STABLE: Sequence committed to ${mode} ledger.` });
       setTimeout(() => {
         onEventCreated();
         setName('');
@@ -72,7 +73,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
         setStatus(null);
       }, 1500);
     } catch (err: any) {
-      setStatus({ type: 'error', message: `FAULT: ${err.message.toUpperCase()}` });
+      setStatus({ type: 'error', message: `PROTOCOL_FAULT: ${err.message.toUpperCase()}` });
     } finally {
       setLoading(false);
     }

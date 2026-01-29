@@ -15,8 +15,8 @@ import { SchoolArm, AdminRole } from './types';
 import { useSovereignStore } from './store';
 
 /**
- * SOVEREIGN ADMIN PROVISIONING [V131.0 - OBSIDIAN HARDENED]
- * Authorizes Super Admins to provision officials across UPSS, CAM, and CAGS.
+ * SOVEREIGN ADMIN PROVISIONING [V139.0 - OBSIDIAN HARDENED]
+ * Forces app_metadata injection to solve RLS_DENIAL and Sector Mismatch.
  */
 const AdminProvisioning: React.FC = () => {
   const { user: currentUser } = useSovereignStore();
@@ -59,6 +59,7 @@ const AdminProvisioning: React.FC = () => {
     const armString = formData.arm;
 
     try {
+      // CRITICAL: Setting app_metadata is required for JWT-based RLS policies
       const { error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: cleanEmail,
         password: formData.password,

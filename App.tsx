@@ -12,17 +12,10 @@ const App: React.FC = () => {
 
   const fetchProfile = useCallback(async (sessionUser: User) => {
     try {
-      // Attempt to fetch profile data from Supabase
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sessionUser.id)
-        .single();
+      // Prioritize cryptographic claims from JWT app_metadata
+      const appMeta = sessionUser.app_metadata || {};
+      const userMeta = sessionUser.user_metadata || {};
       
-      if (error && error.code !== 'PGRST116') {
-        console.warn("PROFILE_FETCH_NOTICE:", error.message);
-      }
-
       const roleMap: Record<string, AdminRole> = { 
         'super_admin': AdminRole.SUPER_KING, 
         'super_king': AdminRole.SUPER_KING, 
@@ -30,29 +23,32 @@ const App: React.FC = () => {
         'member': AdminRole.MEMBER 
       };
       
-      const metadata = sessionUser.user_metadata || {};
-      const metaRole = (metadata.role || 'member').toLowerCase();
+      // Fallback only to profiles table if metadata is missing (legacy)
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', sessionUser.id)
+        .single();
       
-      const resolvedRole = roleMap[data?.role?.toLowerCase() || metaRole] || AdminRole.MEMBER;
-      const resolvedArm = (data?.school_arm || metadata.school_arm || 'GLOBAL').toUpperCase() as SchoolArm;
+      const resolvedRole = roleMap[appMeta.role] || roleMap[dbProfile?.role] || roleMap[userMeta.role] || AdminRole.MEMBER;
+      const resolvedArm = (appMeta.school_arm || dbProfile?.school_arm || userMeta.school_arm || 'GLOBAL').toUpperCase() as SchoolArm;
 
       setUser({ 
         id: sessionUser.id, 
-        name: data?.full_name || metadata.full_name || 'Operative', 
+        name: dbProfile?.full_name || userMeta.full_name || 'Operative', 
         email: sessionUser.email || '', 
         role: resolvedRole, 
         arm: resolvedArm 
       });
     } catch (e) {
-      console.error("GATE_FAULT_RECOVERING", e);
-      // Fallback to metadata if DB profile query fails for any reason
-      const metadata = sessionUser.user_metadata || {};
+      console.warn("UPLINK_NOTICE: FALLBACK_MODE_ACTIVE");
+      const userMeta = sessionUser.user_metadata || {};
       setUser({
         id: sessionUser.id,
-        name: metadata.full_name || 'Operative',
+        name: userMeta.full_name || 'Operative',
         email: sessionUser.email || '',
         role: AdminRole.MEMBER,
-        arm: (metadata.school_arm || 'GLOBAL').toUpperCase() as SchoolArm
+        arm: (userMeta.school_arm || 'GLOBAL').toUpperCase() as SchoolArm
       });
     }
   }, [setUser]);
@@ -87,7 +83,6 @@ const App: React.FC = () => {
       } else if (event === 'SIGNED_OUT') {
         clearSession();
         if (isMounted) setAuthLoading(false);
-        // Ensure we are at root for clean state
         if (window.location.pathname !== '/') {
           window.location.replace('/');
         }
