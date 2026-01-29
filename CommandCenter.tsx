@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from './supabase';
 import { AdminRole } from './types';
@@ -42,29 +41,26 @@ const CommandCenter: React.FC = () => {
       case 'home':
         if (user.role === AdminRole.SUPER_KING) return <SuperAdminDashboard />;
         if (user.role === AdminRole.SUB_ADMIN) return <SubAdminConsole admin={user} onEventCreated={() => setActiveTab('home')} />;
-        // Default home for members is the leaderboard/telemetry view
         return <MemberLeaderboard />;
       case 'telemetry':
         return <MemberLeaderboard />;
       case 'bracket':
         return <TournamentBracket />;
       case 'create':
-         if (user.role === AdminRole.MEMBER) return <MemberLeaderboard />; // Members can't create
+         if (user.role === AdminRole.MEMBER) return <MemberLeaderboard />; 
         return <SubAdminConsole admin={user} onEventCreated={() => setActiveTab('home')} />;
       case 'users':
-        if (user.role !== AdminRole.SUPER_KING) return <SuperAdminDashboard />;
         return <SuperAdminDashboard />;
       default:
         return <SuperAdminDashboard />;
     }
   };
 
-  const NavItem = ({ id, icon: Icon, label, path }: { id: typeof activeTab, icon: any, label: string, path: string }) => (
+  const NavItem = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
     <button 
       onClick={() => { 
         setActiveTab(id); 
         setSidebarOpen(false);
-        window.history.pushState({}, '', path);
       }} 
       className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all duration-300 group ${
         activeTab === id 
@@ -98,17 +94,17 @@ const CommandCenter: React.FC = () => {
           <div>
             <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] px-5 mb-5 italic text-left">Navigation</div>
             <div className="space-y-1.5">
-              <NavItem id="home" icon={LayoutDashboard} label="Nexus Control" path="/" />
-              <NavItem id="telemetry" icon={BarChart3} label="Live Ledger" path="/spectator/view" />
-              <NavItem id="bracket" icon={GitPullRequest} label="Tournament" path="/bracket" />
+              <NavItem id="home" icon={LayoutDashboard} label="Nexus Control" />
+              <NavItem id="telemetry" icon={BarChart3} label="Live Ledger" />
+              <NavItem id="bracket" icon={GitPullRequest} label="Tournament" />
             </div>
           </div>
           {user && user.role !== AdminRole.MEMBER && (
             <div>
               <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] px-5 mb-5 italic text-left">Management</div>
               <div className="space-y-1.5">
-                {user.role === AdminRole.SUPER_KING && <NavItem id="users" icon={Users} label="Operatives" path="/admin/console" />}
-                <NavItem id="create" icon={Plus} label="Provision" path={user.arm ? `/official/tactical/${user.arm.toLowerCase()}` : '/official/tactical'} />
+                {user.role === AdminRole.SUPER_KING && <NavItem id="users" icon={Users} label="Operatives" />}
+                <NavItem id="create" icon={Plus} label="Provision" />
               </div>
             </div>
           )}

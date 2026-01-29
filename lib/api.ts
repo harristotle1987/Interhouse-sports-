@@ -2,7 +2,8 @@ import { supabase } from '../supabase';
 import { LiveMatch } from '../types';
 
 /**
- * SOVEREIGN API ENGINE [V10.0 - HARDENED]
+ * SOVEREIGN API ENGINE [V130.0 - SIGNAL-FREE]
+ * All signals removed to prevent STAGING_FAILURE timeouts in production.
  */
 export const SovereignAPI = {
   async stageEvents(payloads: Partial<LiveMatch>[]) {
@@ -38,7 +39,6 @@ export const SovereignAPI = {
 
   async createEventGlobal(payload: Partial<LiveMatch>) {
     try {
-      // Standard async call - Removed Signal/AbortController
       const { data, error } = await supabase
         .from('matches')
         .insert(payload)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
 import { AdminRole, SchoolArm } from './types';
@@ -9,12 +9,20 @@ import { Loader2 } from 'lucide-react';
 const App: React.FC = () => {
   const { setUser, clearSession } = useSovereignStore();
   const [authLoading, setAuthLoading] = useState(true);
-  const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (sessionUser: User) => {
     try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
+      // Attempt to fetch profile data from Supabase
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', sessionUser.id)
+        .single();
       
+      if (error && error.code !== 'PGRST116') {
+        console.warn("PROFILE_FETCH_NOTICE:", error.message);
+      }
+
       const roleMap: Record<string, AdminRole> = { 
         'super_admin': AdminRole.SUPER_KING, 
         'super_king': AdminRole.SUPER_KING, 
@@ -36,39 +44,58 @@ const App: React.FC = () => {
         arm: resolvedArm 
       });
     } catch (e) {
-      console.error("GATE_FAULT", e);
-      clearSession();
+      console.error("GATE_FAULT_RECOVERING", e);
+      // Fallback to metadata if DB profile query fails for any reason
+      const metadata = sessionUser.user_metadata || {};
+      setUser({
+        id: sessionUser.id,
+        name: metadata.full_name || 'Operative',
+        email: sessionUser.email || '',
+        role: AdminRole.MEMBER,
+        arm: (metadata.school_arm || 'GLOBAL').toUpperCase() as SchoolArm
+      });
     }
-  }, [setUser, clearSession]);
+  }, [setUser]);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    
-    setAuthLoading(true);
-    
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        await fetchProfile(session.user);
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        if (session?.user) {
+          await fetchProfile(session.user);
+        }
+      } catch (err) {
+        console.error("AUTH_INIT_ERROR", err);
+      } finally {
+        if (isMounted) setAuthLoading(false);
       }
-      setAuthLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
       if (event === 'SIGNED_IN' && session?.user) {
         setAuthLoading(true);
         await fetchProfile(session.user);
-        setAuthLoading(false);
+        if (isMounted) setAuthLoading(false);
       } else if (event === 'SIGNED_OUT') {
         clearSession();
-        setAuthLoading(false);
+        if (isMounted) setAuthLoading(false);
+        // Ensure we are at root for clean state
         if (window.location.pathname !== '/') {
-            window.location.replace('/');
+          window.location.replace('/');
         }
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [fetchProfile, clearSession]);

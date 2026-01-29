@@ -1,83 +1,34 @@
 -- ==========================================================
--- SOVEREIGN SECURITY HARDENING PROTOCOL [V129.0 - PRODUCTION]
--- CLEAN-TEXT JWT HELPERS & RECURSION BYPASS
+-- SOVEREIGN CORE SQL [V131.0 - OBSIDIAN REPAIR]
+-- RECURSION BYPASS & SECTOR-LOCKING PROTOCOLS
 -- ==========================================================
 
--- 1. AUTH HELPERS (NON-RECURSIVE)
--- These functions extract claims directly from the JWT for high-speed evaluation.
-
--- Returns a JSONB object from app_metadata (Secure)
-CREATE OR REPLACE FUNCTION get_my_claim(claim TEXT)
-RETURNS jsonb
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT coalesce(
-    current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' -> claim,
-    'null'::jsonb
-  )
-$$;
-
--- Returns a clean TEXT value (no quotes) from app_metadata (Secure)
+-- 1. JWT CLAIM HELPERS (ULTRA-FAST)
+-- Extracts values directly from JWT to avoid recursive table lookups
 CREATE OR REPLACE FUNCTION get_my_claim_text(claim TEXT)
-RETURNS TEXT
-LANGUAGE sql
-STABLE
-AS $$
+RETURNS TEXT LANGUAGE sql STABLE AS $$
   SELECT current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' ->> claim
 $$;
 
+-- 2. PROFILES SECURITY (IDENTITY HUB)
+-- Super Admins manage all 2 Super + 9 Sub-admins.
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- 2. SECURITY INITIALIZATION
-ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
-
-
--- 3. MATCHES: SECTOR-LOCKED TELEMETRY
--- Enforces administrative boundaries based on the operative's assigned Node.
-
--- Drop existing policies to avoid handshake conflicts.
-DROP POLICY IF EXISTS "Allow admins to insert matches" ON public.matches;
-DROP POLICY IF EXISTS "Allow admins to view matches" ON public.matches;
-DROP POLICY IF EXISTS "Allow admins to update matches" ON public.matches;
-DROP POLICY IF EXISTS "Allow SUPER_KING to delete matches" ON public.matches;
-DROP POLICY IF EXISTS "Allow global match visibility" ON public.matches;
-
--- INSERT POLICY:
--- Super Admins have global provisioning authority.
--- Sub-Admins (Sector Officials) are locked to their assigned Node.
-CREATE POLICY "Allow admins to insert matches"
-ON public.matches
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
-  (
-    get_my_claim_text('role') = 'sub_admin' AND 
-    school_arm::text = get_my_claim_text('school_arm')
-  )
-);
-
--- SELECT POLICY:
--- Controls visibility of match telemetry. 
--- Note: Set to true if global visibility is required for public leaderboards.
-CREATE POLICY "Allow admins to view matches"
-ON public.matches
-FOR SELECT
-TO authenticated
+DROP POLICY IF EXISTS "Admin Identity Management" ON public.profiles;
+CREATE POLICY "Admin Identity Management" ON public.profiles
+FOR ALL TO authenticated
 USING (
   (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
-  (
-    get_my_claim_text('role') IN ('sub_admin', 'member') AND 
-    school_arm::text = get_my_claim_text('school_arm')
-  )
+  (auth.uid() = id)
 );
 
--- UPDATE POLICY:
--- Prevents cross-sector data manipulation.
-CREATE POLICY "Allow admins to update matches"
-ON public.matches
-FOR UPDATE
-TO authenticated
+-- 3. MATCHES/NEXUS SECURITY (UNIFIED CONTROL)
+-- Sub-Admins are locked to their specific house IDs (school_arm)
+ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Sub-Admin Nexus Control" ON public.matches;
+CREATE POLICY "Sub-Admin Nexus Control" ON public.matches
+FOR ALL TO authenticated
 USING (
   (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
   (
@@ -93,18 +44,31 @@ WITH CHECK (
   )
 );
 
--- DELETE POLICY:
--- Destructive operations restricted to High Command.
-CREATE POLICY "Allow SUPER_KING to delete matches"
-ON public.matches
-FOR DELETE
-TO authenticated
+-- 4. PROVISIONS/RESULTS SECURITY
+ALTER TABLE public.event_results ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Sector Result Management" ON public.event_results;
+CREATE POLICY "Sector Result Management" ON public.event_results
+FOR ALL TO authenticated
 USING (
-  get_my_claim_text('role') IN ('super_admin', 'super_king')
+  (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
+  (
+    get_my_claim_text('role') = 'sub_admin' AND 
+    EXISTS (
+      SELECT 1 FROM public.matches m 
+      WHERE m.id = match_id 
+      AND m.school_arm::text = get_my_claim_text('school_arm')
+    )
+  )
 );
 
+-- 5. PUBLIC BROADCAST (READ-ONLY FEED)
+DROP POLICY IF EXISTS "Global Broadcast Access" ON public.matches;
+CREATE POLICY "Global Broadcast Access" ON public.matches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Global Result Access" ON public.event_results;
+CREATE POLICY "Global Result Access" ON public.event_results FOR SELECT USING (true);
 
--- 4. SYSTEM KILL-SWITCH (SUPER ADMIN ONLY)
+-- 6. SYSTEM KILL-SWITCH (SUPER ADMIN ONLY)
 CREATE OR REPLACE FUNCTION purge_all_data()
 RETURNS void AS $$
 BEGIN
