@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-// Fixed incorrect import: adminSupabase -> supabaseAdmin
-import { supabaseAdmin } from './supabase';
 import { Terminal, Loader2, ShieldCheck, AlertTriangle, Mail } from 'lucide-react';
 
 export const ProvisioningValidator: React.FC = () => {
@@ -13,76 +11,14 @@ export const ProvisioningValidator: React.FC = () => {
     setLoading(true);
     setLogs(['INITIALIZING EMAIL-FIRST VALIDATION...', '--------------------------------']);
 
-    // Fixed reference to supabaseAdmin
-    if (!supabaseAdmin) {
-      log('CRITICAL FAILURE: Service Role Key not detected in environment.');
-      setLoading(false);
-      return;
-    }
-
-    const targets = [
-      {
-        email: `test_official_${Date.now()}@bunker.com`,
-        password: 'Password123!',
-        meta: { role: 'sub_admin', school_arm: 'UPSS', full_name: 'Test Official' },
-        label: 'USER A (SUB_ADMIN)'
-      },
-      {
-        email: `test_member_${Date.now()}@bunker.com`,
-        password: 'Password123!',
-        meta: { role: 'member', school_arm: 'GLOBAL', full_name: 'Test Member' },
-        label: 'USER B (MEMBER)'
-      }
-    ];
-
     try {
-      for (const target of targets) {
-        log(`[${target.label}] ATTEMPTING PROVISION: ${target.email}`);
-        
-        // 1. Create Identity via Admin API (Email Confirm Bypass)
-        // Fixed reference to supabaseAdmin
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-          email: target.email,
-          password: target.password,
-          email_confirm: true,
-          user_metadata: target.meta
-        });
+      const response = await fetch('/api/run-provisioning-test', {
+        method: 'POST',
+      });
+      
+      const result = await response.json();
+      setLogs(result.logs);
 
-        if (authError) throw new Error(`Auth Provision Failed: ${authError.message}`);
-
-        const userId = authData.user?.id;
-        log(`IDENTITY COMMITTED. UID: ${userId}`);
-
-        // 2. Verify Mirroring (Wait for DB Trigger)
-        log(`POLLING PUBLIC MIRROR...`);
-        await new Promise(r => setTimeout(r, 2000)); 
-
-        // Fixed reference to supabaseAdmin
-        const { data: profile, error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-
-        if (profileError || !profile) {
-          log(`CRITICAL FAILURE: Profile mirroring trigger timed out.`);
-          throw new Error(`Mirroring Fault for ${userId}`);
-        }
-
-        // 3. Deep Verification
-        const roleMatch = profile.role?.toLowerCase() === target.meta.role.toLowerCase();
-        const armMatch = profile.school_arm === target.meta.school_arm;
-
-        if (roleMatch && armMatch) {
-            log(`SUCCESS: Identity and Metadata verified.`);
-            log(`Role: ${profile.role} | Arm: ${profile.school_arm} | Email: ${profile.email}`);
-        } else {
-            log(`DATA MISMATCH: Sync completed but metadata inconsistent.`);
-        }
-        
-        log('--------------------------------');
-      }
-      log('DIAGNOSTIC COMPLETE: EMAIL-FIRST PROTOCOL STABLE.');
     } catch (e: any) {
       log(`FATAL ERROR: ${e.message}`);
       log('SEQUENCE ABORTED.');

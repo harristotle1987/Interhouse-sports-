@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-// Fixed incorrect import: adminSupabase -> supabaseAdmin
-import { supabaseAdmin } from './supabase';
 import { 
   Shield, UserPlus, CheckCircle, Database, Search, RefreshCw, Trash2, Key, Mail, AlertCircle, Loader2, Lock
 } from 'lucide-react';
@@ -41,34 +39,17 @@ const Admin: React.FC<AdminProps> = ({ isDark }) => {
     setError(null);
     setSuccess(null);
 
-    // Fixed reference to supabaseAdmin
-    if (!supabaseAdmin) {
-        setError("UPLINK FAILURE: SERVICE KEY MISSING");
-        setLoading(false);
-        return;
-    }
-
     try {
-      const cleanEmail = formData.email.trim().toLowerCase();
-      
-      const roleValue = 'super_king';
-      const armValue = 'GLOBAL';
-
-      // Fixed reference to supabaseAdmin
-      const { error: provisionError } = await supabaseAdmin.auth.admin.createUser({
-        email: cleanEmail,
-        password: formData.password,
-        email_confirm: true,
-        user_metadata: { 
-          full_name: formData.fullName.toUpperCase(),
-          role: roleValue,
-          school_arm: armValue
-        }
+      const response = await fetch('/api/create-super-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
 
-      if (provisionError) throw provisionError;
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
 
-      setSuccess(`PROVISIONED: ${cleanEmail.toUpperCase()}`);
+      setSuccess(result.message);
       setFormData({ email: '', fullName: '', password: '', role: AdminRole.SUPER_KING, arm: SchoolArm.GLOBAL });
       setShowPassword(false);
       
@@ -84,10 +65,16 @@ const Admin: React.FC<AdminProps> = ({ isDark }) => {
     if (!confirm(`CAUTION: Delete identity ${name}? This action is immutable.`)) return;
     setLoading(true);
     try {
-      // Fixed reference to supabaseAdmin
-      const { error } = await supabaseAdmin!.auth.admin.deleteUser(id);
-      if (error) throw error;
-      setSuccess(`WIPED: Identity removed from core.`);
+      const response = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      setSuccess(result.message);
       fetchLedger();
     } catch (err: any) {
       setError(`FAULT: ${err.message?.toUpperCase()}`);
