@@ -26,36 +26,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     const cleanEmail = email.trim().toLowerCase();
     
-    // 0. MASTER OVERRIDE
-    if (cleanEmail === 'architect@sovereign.global' && password === 'admin') {
-      setUser({
-        id: 'ARCHITECT_MASTER',
-        name: 'Sovereign Architect',
-        email: cleanEmail,
-        role: AdminRole.SUPER_KING,
-        arm: SchoolArm.GLOBAL
-      });
-      window.history.pushState({}, '', '/admin/console');
-      onLoginSuccess();
-      return;
-    }
-
-    // 1. MOCK CHECK
-    const matchingMock = mockUsers.find(u => u.email?.toLowerCase() === cleanEmail);
-    if (matchingMock && password === (matchingMock.password || 'admin')) {
-      setUser(matchingMock);
-      // SOVEREIGN REDIRECT GATE [MOCK]
-      let path = '/spectator/view';
-      if (matchingMock.role === AdminRole.SUPER_KING) path = '/admin/console';
-      else if (matchingMock.role === AdminRole.SUB_ADMIN) path = '/official/tactical';
-      else if (matchingMock.role === AdminRole.MEMBER) path = '/spectator/view';
-      
-      window.history.pushState({}, '', path);
-      onLoginSuccess();
-      return;
-    }
-
-    // 2. SUPABASE HANDSHAKE
+    // This now handles ALL logins, ensuring a valid Supabase session is created.
     const result = await login(cleanEmail, password);
     
     if (result) {
@@ -67,13 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         arm: result.arm
       });
 
-      // SOVEREIGN REDIRECT GATE [PRODUCTION]
-      let targetPath = '/spectator/view';
-      if (result.role === AdminRole.SUPER_KING) targetPath = '/admin/console';
-      else if (result.role === AdminRole.SUB_ADMIN) targetPath = '/official/tactical';
-      else if (result.role === AdminRole.MEMBER) targetPath = '/spectator/view';
-
-      window.history.pushState({}, '', targetPath);
+      window.history.pushState({}, '', result.targetPath);
       onLoginSuccess();
     } else {
       setLocalError("Operative verification failed. Identity not recognized.");
