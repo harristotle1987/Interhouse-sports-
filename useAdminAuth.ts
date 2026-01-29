@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from './supabase';
 import { AdminRole, SchoolArm } from './types';
@@ -22,9 +21,10 @@ export const useAdminAuth = () => {
       if (authError) throw authError;
       if (!authData?.user) throw new Error("IDENTITY_REJECTED");
 
-      const metadata = authData.user.user_metadata || {};
+      // SECURE ROLE RESOLUTION: Prioritize app_metadata (non-user editable)
+      const appMeta = authData.user.app_metadata || {};
+      const userMeta = authData.user.user_metadata || {};
       
-      // SOVEREIGN REDIRECT MATRIX [V9.5]
       const roleMap: Record<string, AdminRole> = {
         'super_king': AdminRole.SUPER_KING,
         'super_admin': AdminRole.SUPER_KING,
@@ -32,16 +32,15 @@ export const useAdminAuth = () => {
         'member': AdminRole.MEMBER
       };
 
-      const rawRole = (metadata.role || '').toLowerCase();
+      const rawRole = (appMeta.role || userMeta.role || '').toLowerCase();
       if (!rawRole) {
           await supabase.auth.signOut();
           throw new Error("UNAUTHORIZED_ACCESS: ROLE_MISSING");
       }
 
       const finalRole = roleMap[rawRole] || AdminRole.MEMBER;
-      const finalArm = (metadata.school_arm || 'GLOBAL').toUpperCase() as SchoolArm;
+      const finalArm = (appMeta.school_arm || userMeta.school_arm || 'GLOBAL').toUpperCase() as SchoolArm;
 
-      // Determine tactical destination
       let targetPath = '/spectator/view';
       if (finalRole === AdminRole.SUPER_KING) targetPath = '/admin/console';
       else if (finalRole === AdminRole.SUB_ADMIN) targetPath = '/official/tactical';

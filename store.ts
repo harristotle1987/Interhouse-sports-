@@ -15,7 +15,6 @@ interface SovereignState {
   isImpersonating: boolean;
   mockUsers: MockOperative[];
   
-  // OFFLINE STORAGE PROTOCOL
   localEvents: LiveMatch[];
   localResults: ScoreEntry[];
 
@@ -24,7 +23,6 @@ interface SovereignState {
   setActiveArm: (arm: SchoolArm) => void;
   addMockUser: (user: MockOperative) => void;
   
-  // LOCAL ACTIONS
   addLocalEvent: (event: LiveMatch) => void;
   updateLocalEvent: (id: string, updates: Partial<LiveMatch>) => void;
   addLocalResult: (result: ScoreEntry) => void;
@@ -54,25 +52,10 @@ const generateMembers = (): MockOperative[] => {
   return members;
 };
 
-const generateAdminHeads = (): MockOperative[] => {
-    const heads: MockOperative[] = [];
-    const arms = [SchoolArm.UPSS, SchoolArm.CAM, SchoolArm.CAGS];
-    let idCounter = 100;
-    arms.forEach(arm => {
-        for(let i = 1; i <= 5; i++) {
-             heads.push({
-                id: `head-${idCounter++}`,
-                name: `${arm} Dept Head ${i}`,
-                email: `head.${i}@sovereign.${arm.toLowerCase()}`,
-                role: AdminRole.MEMBER,
-                arm: arm,
-                password: 'admin'
-            });
-        }
-    });
-    return heads;
-}
-
+/**
+ * SOVEREIGN STATE STORE [V10.1 - MODERN ZUSTAND]
+ * Uses named imports to eliminate deprecation warnings and enhance high-speed Obsidian UI.
+ */
 export const useSovereignStore = create<SovereignState>()(
   persist(
     (set, get) => ({
@@ -84,18 +67,7 @@ export const useSovereignStore = create<SovereignState>()(
       isImpersonating: false,
       mockUsers: [
         { id: 'sa-01', name: 'Sovereign Architect', email: 'architect@sovereign.global', role: AdminRole.SUPER_KING, arm: SchoolArm.GLOBAL, password: 'admin' },
-        { id: 'sa-02', name: 'High Overseer', email: 'overseer@sovereign.upss', role: AdminRole.SUPER_KING, arm: SchoolArm.UPSS, password: 'admin' },
-        { id: 'upss-dir', name: 'UPSS Director', email: 'director@sovereign.upss', role: AdminRole.SUB_ADMIN, arm: SchoolArm.UPSS, password: 'admin' },
-        { id: 'upss-log', name: 'UPSS Logistics', email: 'logistics@sovereign.upss', role: AdminRole.SUB_ADMIN, arm: SchoolArm.UPSS, password: 'admin' },
-        { id: 'upss-trk', name: 'UPSS Track Lead', email: 'track.lead@sovereign.upss', role: AdminRole.SUB_ADMIN, arm: SchoolArm.UPSS, password: 'admin' },
-        { id: 'upss-fld', name: 'UPSS Field Lead', email: 'field.lead@sovereign.upss', role: AdminRole.SUB_ADMIN, arm: SchoolArm.UPSS, password: 'admin' },
-        { id: 'upss-rec', name: 'UPSS Records', email: 'records@sovereign.upss', role: AdminRole.SUB_ADMIN, arm: SchoolArm.UPSS, password: 'admin' },
-        { id: 'cam-dir', name: 'CAM Director', email: 'director@sovereign.cam', role: AdminRole.SUB_ADMIN, arm: SchoolArm.CAM, password: 'admin' },
-        { id: 'cam-log', name: 'CAM Logistics', email: 'logistics@sovereign.cam', role: AdminRole.SUB_ADMIN, arm: SchoolArm.CAM, password: 'admin' },
-        { id: 'cags-dir', name: 'CAGS Director', email: 'director@sovereign.cags', role: AdminRole.SUB_ADMIN, arm: SchoolArm.CAGS, password: 'admin' },
-        { id: 'cags-log', name: 'CAGS Logistics', email: 'logistics@sovereign.cags', role: AdminRole.SUB_ADMIN, arm: SchoolArm.CAGS, password: 'admin' },
-        ...generateMembers(),
-        ...generateAdminHeads()
+        ...generateMembers()
       ],
       localEvents: [],
       localResults: [],
