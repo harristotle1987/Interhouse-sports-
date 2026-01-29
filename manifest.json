@@ -1,12 +1,13 @@
+
 {
   "name": "Sovereign Sports Architect",
   "short_name": "Sovereign",
   "description": "The absolute standard in academic athletics. Precision scoring, real-time analytics, and automated tournament management for the modern era.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
-  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>",
@@ -14,12 +15,12 @@
       "sizes": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg width='192' height='192' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='24' height='24' rx='6' fill='%23000000'/%3E%3Cpath d='M12 2.25L4.5 6.375V12C4.5 17.1825 7.7625 21.9375 12 23.25C16.2375 21.9375 19.5 17.1825 19.5 12V6.375L12 2.25Z' fill='white'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg width='192' height='192' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='24' height='24' rx='6' fill='%234f46e5'/%3E%3Cpath d='M12 2.25L4.5 6.375V12C4.5 17.1825 7.7625 21.9375 12 23.25C16.2375 21.9375 19.5 17.1825 19.5 12V6.375L12 2.25Z' fill='white'/%3E%3C/svg%3E",
       "type": "image/svg+xml",
       "sizes": "192x192"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg width='512' height='512' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='24' height='24' rx='6' fill='%23000000'/%3E%3Cpath d='M12 2.25L4.5 6.375V12C4.5 17.1825 7.7625 21.9375 12 23.25C16.2375 21.9375 19.5 17.1825 19.5 12V6.375L12 2.25Z' fill='white'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg width='512' height='512' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='24' height='24' rx='6' fill='%234f46e5'/%3E%3Cpath d='M12 2.25L4.5 6.375V12C4.5 17.1825 7.7625 21.9375 12 23.25C16.2375 21.9375 19.5 17.1825 19.5 12V6.375L12 2.25Z' fill='white'/%3E%3C/svg%3E",
       "type": "image/svg+xml",
       "sizes": "512x512"
     }

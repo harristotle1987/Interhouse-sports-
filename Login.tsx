@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Lock, Loader2, ChevronRight, X, Eye, EyeOff, Mail, Users, ArrowLeft } from 'lucide-react';
 import { useAdminAuth } from './useAdminAuth';
@@ -34,6 +35,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         role: AdminRole.SUPER_KING,
         arm: SchoolArm.GLOBAL
       });
+      window.history.pushState({}, '', '/admin/console');
       onLoginSuccess();
       return;
     }
@@ -42,6 +44,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const matchingMock = mockUsers.find(u => u.email?.toLowerCase() === cleanEmail);
     if (matchingMock && password === (matchingMock.password || 'admin')) {
       setUser(matchingMock);
+      // SOVEREIGN REDIRECT GATE [MOCK]
+      let path = '/spectator/view';
+      if (matchingMock.role === AdminRole.SUPER_KING) path = '/admin/console';
+      else if (matchingMock.role === AdminRole.SUB_ADMIN) path = '/official/tactical';
+      else if (matchingMock.role === AdminRole.MEMBER) path = '/spectator/view';
+      
+      window.history.pushState({}, '', path);
       onLoginSuccess();
       return;
     }
@@ -57,6 +66,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         role: result.role,
         arm: result.arm
       });
+
+      // SOVEREIGN REDIRECT GATE [PRODUCTION]
+      let targetPath = '/spectator/view';
+      if (result.role === AdminRole.SUPER_KING) targetPath = '/admin/console';
+      else if (result.role === AdminRole.SUB_ADMIN) targetPath = '/official/tactical';
+      else if (result.role === AdminRole.MEMBER) targetPath = '/spectator/view';
+
+      window.history.pushState({}, '', targetPath);
       onLoginSuccess();
     } else {
       setLocalError("Operative verification failed. Identity not recognized.");
@@ -71,6 +88,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const displayError = localError || authError;
 
+  // Group users for the roster
   const superAdmins = mockUsers.filter(u => u.role === AdminRole.SUPER_KING);
   const subAdmins = mockUsers.filter(u => u.role === AdminRole.SUB_ADMIN);
   const members = mockUsers.filter(u => u.role === AdminRole.MEMBER && !u.email.startsWith('head.'));
@@ -139,6 +157,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   name="email"
                   type="email" 
                   autoComplete="email"
+                  pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                  title="Please enter a valid email address (e.g. director@sovereign.upss)"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full bg-black border border-zinc-800 px-6 py-5 text-white font-black tracking-tight focus:outline-none focus:border-emerald-500 transition-all placeholder:text-zinc-900 text-lg italic uppercase"

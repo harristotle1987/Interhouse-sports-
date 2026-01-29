@@ -3,27 +3,15 @@ import React, { useState } from 'react';
 import MemberDashboard from './MemberDashboard';
 import MemberLeaderboard from './MemberLeaderboard';
 import TournamentBracket from './TournamentBracket';
-import SubAdminConsole from './SubAdminConsole';
-import { Activity, BarChart3, GitPullRequest, LogOut, Shield, Terminal } from 'lucide-react';
+import { Activity, BarChart3, GitPullRequest, LogOut, Shield } from 'lucide-react';
 import { useSovereignStore } from './store';
 import { supabase } from './supabase';
-import { usePWAPrompt } from './hooks/usePWAPrompt';
-import IOSInstallPrompt from './IOSInstallPrompt';
-import AndroidInstallButton from './AndroidInstallButton';
-import { AdminRole } from './types';
 
-type MobileTab = 'feed' | 'standings' | 'bracket' | 'console';
+type MobileTab = 'feed' | 'standings' | 'bracket';
 
 const MobileApp: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<MobileTab>('feed');
   const { user, clearSession } = useSovereignStore();
-  const [activeTab, setActiveTab] = useState<MobileTab>(user?.role === AdminRole.SUB_ADMIN ? 'console' : 'feed');
-  
-  const { 
-    showAndroidInstall, 
-    triggerAndroidInstall, 
-    showIOSInstallPrompt, 
-    closeIOSInstallPrompt 
-  } = usePWAPrompt();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -39,8 +27,6 @@ const MobileApp: React.FC = () => {
         return <MemberLeaderboard />;
       case 'bracket':
         return <TournamentBracket />;
-      case 'console':
-        return user ? <SubAdminConsole admin={user} onEventCreated={() => {}} /> : <MemberDashboard />;
       default:
         return <MemberDashboard />;
     }
@@ -60,15 +46,6 @@ const MobileApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col font-sans">
-       <IOSInstallPrompt 
-        isOpen={showIOSInstallPrompt} 
-        onClose={closeIOSInstallPrompt} 
-      />
-       <AndroidInstallButton 
-        isVisible={showAndroidInstall} 
-        onInstall={triggerAndroidInstall} 
-      />
-
       <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800 p-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-lg shadow-md shadow-indigo-900">
@@ -92,9 +69,6 @@ const MobileApp: React.FC = () => {
           <NavItem id="feed" icon={Activity} label="Live Feed" />
           <NavItem id="standings" icon={BarChart3} label="Standings" />
           <NavItem id="bracket" icon={GitPullRequest} label="Bracket" />
-          {user?.role === AdminRole.SUB_ADMIN && (
-            <NavItem id="console" icon={Terminal} label="Console" />
-          )}
         </div>
       </nav>
     </div>

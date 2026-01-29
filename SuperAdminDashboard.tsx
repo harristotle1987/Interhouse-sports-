@@ -1,11 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
-import { Shield, RefreshCw, Users, Database, Globe, Lock, ShieldAlert, Zap, CheckCircle2, Loader2, Award, ZapOff, Monitor, Activity, Radio } from 'lucide-react';
+import { Shield, RefreshCw, Users, Database, Globe, Lock, ShieldAlert, Zap, CheckCircle2, Loader2, Award, ZapOff, Monitor, Activity, Radio, Biohazard } from 'lucide-react';
 import { useSovereignStore } from './store';
 import { AdminRole, SchoolArm, LiveMatch } from './types';
 import { useOperativeLedger } from './hooks/useOperativeLedger';
 import AdminProvisioning from './AdminProvisioning';
 import { supabase } from './supabase';
-import KillSwitch from './components/admin/KillSwitch';
 
 const GlobalTelemetryMonitor: React.FC = () => {
   const [activeMatches, setActiveMatches] = useState<LiveMatch[]>([]);
@@ -142,6 +142,69 @@ const SectorLockdown: React.FC = () => {
   );
 };
 
+const KillSwitchProtocol: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState('');
+
+  const handlePurge = async () => {
+    if (confirmation !== 'PURGE') {
+      setError('CONFIRMATION TEXT MISMATCH.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { error: rpcError } = await supabase.rpc('purge_mock_data');
+      if (rpcError) throw rpcError;
+      setSuccess('MOCK DATA PURGED. SYSTEM RESET. RELOADING...');
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (err: any) {
+      setError(`KILL-SWITCH FAULT: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-red-950/80 p-10 rounded-[3rem] border-2 border-dashed border-red-500/30 text-left shadow-2xl">
+      <div className="flex items-center gap-4 mb-8">
+        <Biohazard className="text-red-400" size={28} />
+        <h3 className="text-xl font-black text-white uppercase italic tracking-widest">Kill-Switch Protocol</h3>
+      </div>
+      <p className="text-[10px] font-black text-red-300 uppercase tracking-widest italic mb-6 leading-relaxed">
+        This command surgically removes all test entries from `matches` and `event_results`. This action is irreversible.
+      </p>
+      
+      <div className="space-y-6">
+        <input
+          type="text"
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+          placeholder="TYPE 'PURGE' TO ARM"
+          className="w-full bg-black/50 border-2 border-red-500/30 px-6 py-4 text-white font-black rounded-2xl focus:outline-none focus:border-red-500 transition-all uppercase italic text-sm shadow-inner placeholder:text-red-500/30 text-center"
+        />
+        <button
+          onClick={handlePurge}
+          disabled={loading || confirmation !== 'PURGE'}
+          className="w-full py-5 bg-red-600 text-white border border-red-400 rounded-2xl font-black uppercase italic tracking-[0.4em] flex items-center justify-center gap-4 hover:bg-red-500 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {loading ? <Loader2 className="animate-spin" size={20} /> : 'Authorize Full Purge'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="mt-6 p-4 bg-black/30 rounded-lg text-red-400 text-[10px] font-mono animate-in zoom-in-95">{error}</div>
+      )}
+      {success && (
+        <div className="mt-6 p-4 bg-black/30 rounded-lg text-emerald-400 text-[10px] font-mono animate-in zoom-in-95">{success}</div>
+      )}
+    </div>
+  );
+};
+
 const SuperAdminDashboard: React.FC = () => {
   const { user } = useSovereignStore();
   const { operatives, loading: listLoading, refetch: refetchLedger } = useOperativeLedger();
@@ -173,7 +236,7 @@ const SuperAdminDashboard: React.FC = () => {
         <div className="xl:col-span-4 space-y-12">
           <GlobalTelemetryMonitor />
           <SectorLockdown />
-          <KillSwitch />
+          <KillSwitchProtocol />
           <AdminProvisioning />
         </div>
 

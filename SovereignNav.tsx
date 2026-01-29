@@ -1,7 +1,8 @@
+
 import React from 'react';
+import { supabase } from './supabase';
 import { useSovereignStore } from './store';
 import { AdminRole, SchoolArm } from './types';
-import { useAuth } from './context/AuthContext';
 import { 
   LogOut, 
   Terminal, 
@@ -21,8 +22,19 @@ interface SovereignNavProps {
  * High-contrast "Exit Bunker" protocol for secure termination.
  */
 const SovereignNav: React.FC<SovereignNavProps> = ({ activeTab, setActiveTab }) => {
-  const { user, currentRole } = useSovereignStore();
-  const { logout } = useAuth(); // Use the new high-speed logout hook
+  const { user, currentRole, clearSession } = useSovereignStore();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Uplink termination failed", e);
+    }
+    clearSession();
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = '/'; 
+  };
 
   if (!user) return null;
 
@@ -69,7 +81,7 @@ const SovereignNav: React.FC<SovereignNavProps> = ({ activeTab, setActiveTab }) 
 
           {/* High-Contrast Exit Protocol */}
           <button 
-            onClick={logout}
+            onClick={handleLogout}
             className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black px-5 py-2.5 rounded-full uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/5 flex items-center gap-2"
           >
             <LogOut size={14} />

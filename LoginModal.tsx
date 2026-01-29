@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { X, Loader2, ChevronRight, Eye, EyeOff, ShieldCheck, Mail, Users } from 'lucide-react';
+import { X, Loader2, ChevronRight, Eye, EyeOff, ShieldCheck, Mail, Users, ChevronDown } from 'lucide-react';
 import { useAdminAuth } from './useAdminAuth';
 import { useSovereignStore } from './store';
 import { AdminRole, SchoolArm } from './types';
@@ -28,7 +29,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
     const cleanEmail = email.trim().toLowerCase();
     
-    // 0. MASTER OVERRIDE
+    // 0. MASTER OVERRIDE HANDSHAKE
     if (cleanEmail === 'architect@sovereign.global' && password === 'admin') {
       setUser({
         id: 'ARCHITECT_MASTER',
@@ -37,6 +38,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         role: AdminRole.SUPER_KING,
         arm: SchoolArm.GLOBAL
       });
+      window.history.pushState({}, '', '/admin/console');
       onClose();
       return;
     }
@@ -45,6 +47,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const matchingMock = mockUsers.find(u => u.email?.toLowerCase() === cleanEmail);
     if (matchingMock && password === (matchingMock.password || 'admin')) {
       setUser(matchingMock);
+      // SOVEREIGN REDIRECT GATE [MOCK]
+      let targetPath = '/spectator/view';
+      if (matchingMock.role === AdminRole.SUPER_KING) targetPath = '/admin/console';
+      else if (matchingMock.role === AdminRole.SUB_ADMIN) targetPath = '/official/tactical';
+      else if (matchingMock.role === AdminRole.MEMBER) targetPath = '/spectator/view';
+
+      window.history.pushState({}, '', targetPath);
       onClose();
       return;
     }
@@ -60,6 +69,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         role: result.role,
         arm: result.arm
       });
+
+      // SOVEREIGN REDIRECT GATE [PRODUCTION]
+      let targetPath = '/spectator/view';
+      if (result.role === AdminRole.SUPER_KING) targetPath = '/admin/console';
+      else if (result.role === AdminRole.SUB_ADMIN) targetPath = '/official/tactical';
+      else if (result.role === AdminRole.MEMBER) targetPath = '/spectator/view';
+
+      window.history.pushState({}, '', targetPath);
       onClose();
     }
   };
@@ -72,6 +89,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   const displayError = authError || localError;
 
+  // Group users for the roster
   const superAdmins = mockUsers.filter(u => u.role === AdminRole.SUPER_KING);
   const subAdmins = mockUsers.filter(u => u.role === AdminRole.SUB_ADMIN);
   const members = mockUsers.filter(u => u.role === AdminRole.MEMBER && !u.email.startsWith('head.'));
@@ -142,6 +160,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   required 
                   type="email" 
                   autoComplete="email" 
+                  pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                  title="Please enter a valid email address (e.g. director@sovereign.upss)"
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
                   className="w-full bg-slate-50 border border-slate-200 px-6 py-5 text-slate-900 font-black rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all uppercase placeholder:normal-case italic text-lg shadow-inner" 
