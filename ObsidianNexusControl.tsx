@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
 import { 
-  Plus, 
   Target, 
-  ShieldCheck, 
   Loader2, 
   Activity, 
   Clock, 
   Zap, 
-  ArrowRight,
   History,
-  Info
+  Info,
+  ShieldCheck
 } from 'lucide-react';
 import { SchoolArm, AdminUser, LiveMatch, MatchType, EventCategory, ScoringType } from './types';
 import { supabase } from './supabase';
 import { HOUSES } from './constants';
 
 /**
- * OBSIDIAN NEXUS CONTROL [V130.0]
- * High-contrast, unified stream for immediate and scheduled event provisioning.
- * All AbortControllers removed.
+ * OBSIDIAN NEXUS CONTROL [V134.0 - UNIFIED]
+ * High-speed stream for immediate and staged event provisioning.
+ * Integrated with Hardened RLS protocols.
  */
 const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => void }> = ({ admin, onEventCreated }) => {
   const [mode, setMode] = useState<'IMMEDIATE' | 'STAGED'>('IMMEDIATE');
@@ -26,9 +24,8 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
   const [houseA, setHouseA] = useState('');
   const [houseB, setHouseB] = useState('');
   const [kickoff, setKickoff] = useState('');
-  const [category, setCategory] = useState<EventCategory>(EventCategory.Track);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const sectorArm = admin.arm || SchoolArm.UPSS;
 
@@ -41,7 +38,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
       school_arm: sectorArm,
       event_name: name.toUpperCase() || 'UNCLASSIFIED_TELEMETRY',
       status: mode === 'IMMEDIATE' ? 'live' : 'scheduled',
-      event_type: category,
+      event_type: EventCategory.Team,
       scoring_logic: ScoringType.Single_Marks,
       kickoff_at: mode === 'STAGED' ? new Date(kickoff).toISOString() : new Date().toISOString(),
       match_type: MatchType.Team,
@@ -57,10 +54,15 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
     };
 
     try {
+      // Direct Atomic Insert (Signal-Free)
       const { error } = await supabase.from('matches').insert(payload);
-      if (error) throw error;
+      
+      if (error) {
+        if (error.code === '42501') throw new Error("RLS_DENIAL: Sector permission mismatch.");
+        throw error;
+      }
 
-      setStatus(`SUCCESS: Telemetry committed to ${mode} buffer.`);
+      setStatus({ type: 'success', message: `INITIALIZED: Sequence committed to ${mode} buffer.` });
       setTimeout(() => {
         onEventCreated();
         setName('');
@@ -70,7 +72,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
         setStatus(null);
       }, 1500);
     } catch (err: any) {
-      setStatus(`ERROR: ${err.message.toUpperCase()}`);
+      setStatus({ type: 'error', message: `FAULT: ${err.message.toUpperCase()}` });
     } finally {
       setLoading(false);
     }
@@ -82,16 +84,16 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-10 mb-16 border-b border-zinc-900 pb-12">
         <div className="flex items-center gap-6">
-          <div className="p-5 bg-zinc-900 border border-zinc-800 text-emerald-500 rounded-3xl"><Target size={36} /></div>
+          <div className="p-5 bg-zinc-900 border border-zinc-800 text-emerald-500 rounded-3xl shadow-xl"><Target size={36} /></div>
           <div>
-            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Nexus Provisioning</h3>
-            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] italic mt-2">Authenticated Source: {admin.id.slice(0,12)}</p>
+            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">Nexus Control</h3>
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] italic mt-2">Active Node: {sectorArm}</p>
           </div>
         </div>
 
         <div className="flex p-1.5 bg-zinc-950 border border-zinc-900 rounded-2xl">
-          <button onClick={() => setMode('IMMEDIATE')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest italic transition-all ${mode === 'IMMEDIATE' ? 'bg-emerald-600 text-black' : 'text-zinc-600 hover:text-white'}`}>Immediate Push</button>
-          <button onClick={() => setMode('STAGED')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest italic transition-all ${mode === 'STAGED' ? 'bg-amber-500 text-black' : 'text-zinc-600 hover:text-white'}`}>Staged Sequence</button>
+          <button type="button" onClick={() => setMode('IMMEDIATE')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest italic transition-all ${mode === 'IMMEDIATE' ? 'bg-emerald-600 text-black shadow-lg' : 'text-zinc-600 hover:text-white'}`}>Immediate</button>
+          <button type="button" onClick={() => setMode('STAGED')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest italic transition-all ${mode === 'STAGED' ? 'bg-amber-500 text-black shadow-lg' : 'text-zinc-600 hover:text-white'}`}>Staged</button>
         </div>
       </div>
 
@@ -99,7 +101,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
         <div className="grid md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 ml-1 italic">Event Designation</label>
-            <input required value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-zinc-900 p-6 text-white font-black text-xl rounded-2xl focus:outline-none focus:border-emerald-500 transition-all uppercase italic shadow-inner" placeholder="E.G. 100M FINALS" />
+            <input required value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-zinc-900 p-6 text-white font-black text-xl rounded-2xl focus:outline-none focus:border-emerald-500 transition-all uppercase italic shadow-inner" placeholder="E.G. 100M DASH" />
           </div>
           <div className="space-y-4">
              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 ml-1 italic">Temporal Reference</label>
@@ -113,7 +115,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-12">
+        <div className="grid md:grid-cols-2 gap-12 text-left">
            <div className="space-y-4">
               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 ml-1 italic">Combatant Alpha</label>
               <select value={houseA} onChange={e => setHouseA(e.target.value)} className="w-full bg-black border border-zinc-900 p-6 text-white font-black text-sm rounded-2xl focus:outline-none focus:border-emerald-500 appearance-none italic uppercase">
@@ -131,8 +133,9 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
         </div>
 
         {status && (
-          <div className={`p-6 border rounded-2xl flex items-center gap-4 text-[10px] font-black uppercase tracking-widest italic animate-in zoom-in-95 ${status.includes('ERROR') ? 'bg-red-950/20 border-red-500/30 text-red-500' : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-500'}`}>
-            <Info size={18} /> {status}
+          <div className={`p-6 border rounded-2xl flex items-center gap-4 text-[10px] font-black uppercase tracking-widest italic animate-in zoom-in-95 ${status.type === 'error' ? 'bg-red-950/20 border-red-500/30 text-red-500' : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-500'}`}>
+            {status.type === 'error' ? <Info size={18} /> : <ShieldCheck size={18} />}
+            {status.message}
           </div>
         )}
 
@@ -140,7 +143,7 @@ const ObsidianNexusControl: React.FC<{ admin: AdminUser, onEventCreated: () => v
           {loading ? <Loader2 className="animate-spin" size={32} /> : (
             <>
               {mode === 'IMMEDIATE' ? <Zap size={32} /> : <History size={32} />}
-              Initialize Provisioning
+              Initialize Sequence
             </>
           )}
         </button>
