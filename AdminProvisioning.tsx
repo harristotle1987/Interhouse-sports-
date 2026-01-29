@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabaseAdmin } from './supabase';
 import { 
   ShieldAlert, 
   UserPlus, 
@@ -40,21 +41,37 @@ const AdminProvisioning: React.FC = () => {
 
   const handleProvision = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabaseAdmin) return;
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
+    const cleanEmail = formData.email.trim().toLowerCase();
+    const roleString = formData.role === AdminRole.SUB_ADMIN ? 'sub_admin' : (formData.role === AdminRole.SUPER_KING ? 'super_admin' : 'member');
+    const armString = isArchitect ? formData.arm : (currentUser?.arm || 'GLOBAL');
+
     try {
-      const response = await fetch('/api/provision-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      const { error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: cleanEmail,
+        password: formData.password,
+        email_confirm: true,
+        // SECURITY PROTOCOL: Populate app_metadata for hardened RLS compatibility
+        // app_metadata is immutable by the end user.
+        app_metadata: {
+          role: roleString,
+          school_arm: armString
+        },
+        user_metadata: {
+          full_name: formData.fullName.toUpperCase(),
+          role: roleString,
+          school_arm: armString
+        }
       });
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      if (authError) throw authError;
 
-      setSuccess(result.message);
+      setSuccess(`IDENTITY_DEPLOYED: ${cleanEmail.toUpperCase()}`);
       setFormData({ 
         email: '', 
         fullName: '', 

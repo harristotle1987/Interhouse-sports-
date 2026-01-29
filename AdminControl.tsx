@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+// Fixed incorrect import: adminSupabase -> supabaseAdmin
+import { supabaseAdmin } from './supabase';
 import { 
   Shield, 
   UserPlus, 
@@ -43,26 +45,33 @@ const AdminControl: React.FC<AdminControlProps> = ({ isDark }) => {
 
   const handleProvision = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Fixed reference to supabaseAdmin
+    if (!supabaseAdmin) {
+      setError("UPLINK_FAILURE: SERVICE_ROLE_KEY MISSING.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/provision-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      // Fixed reference to supabaseAdmin
+      const { error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: formData.email.trim(),
+        password: formData.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: formData.fullName,
+          role: formData.role === AdminRole.SUPER_KING ? 'super_admin' : (formData.role === AdminRole.SUB_ADMIN ? 'sub_admin' : 'member'),
+          school_arm: formData.role === AdminRole.SUB_ADMIN ? formData.arm : 'GLOBAL'
+        }
       });
 
-      const result = await response.json();
+      if (authError) throw authError;
 
-      if (!response.ok) {
-        throw new Error(result.error || 'An unknown error occurred.');
-      }
-
-      setSuccess(result.message);
+      setSuccess(`UPLINK ESTABLISHED: ${formData.email}`);
       setFormData({ email: '', fullName: '', password: '', role: AdminRole.MEMBER, arm: SchoolArm.GLOBAL });
       setShowPassword(false);
       

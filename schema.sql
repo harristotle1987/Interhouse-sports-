@@ -1,71 +1,114 @@
 -- ==========================================================
--- SOVEREIGN SECURITY HARDENING PROTOCOL [V124.0 - RECURSION REMOVAL]
+-- SOVEREIGN SECURITY HARDENING PROTOCOL [V129.0 - PRODUCTION]
+-- CLEAN-TEXT JWT HELPERS & RECURSION BYPASS
 -- ==========================================================
 
--- 1. RESET SECURITY STATE
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+-- 1. AUTH HELPERS (NON-RECURSIVE)
+-- These functions extract claims directly from the JWT for high-speed evaluation.
+
+-- Returns a JSONB object from app_metadata (Secure)
+CREATE OR REPLACE FUNCTION get_my_claim(claim TEXT)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT coalesce(
+    current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' -> claim,
+    'null'::jsonb
+  )
+$$;
+
+-- Returns a clean TEXT value (no quotes) from app_metadata (Secure)
+CREATE OR REPLACE FUNCTION get_my_claim_text(claim TEXT)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' ->> claim
+$$;
+
+
+-- 2. SECURITY INITIALIZATION
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.event_results ENABLE ROW LEVEL SECURITY;
 
--- 2. NON-RECURSIVE PROFILE POLICIES
--- Uses app_metadata claims to avoid querying the profiles table within its own policy
-DROP POLICY IF EXISTS "Sovereign Profile Access" ON public.profiles;
-CREATE POLICY "Sovereign Profile Access" ON public.profiles
-FOR ALL TO authenticated
-USING (
-  (auth.uid() = id) OR 
-  ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'super_king'))
-);
 
-DROP POLICY IF EXISTS "Global Profile Visibility" ON public.profiles;
-CREATE POLICY "Global Profile Visibility" ON public.profiles
-FOR SELECT TO authenticated
-USING (true);
+-- 3. MATCHES: SECTOR-LOCKED TELEMETRY
+-- Enforces administrative boundaries based on the operative's assigned Node.
 
--- 3. SECURE MATCH POLICIES
--- Enforces sector boundaries and administrative authority via secure JWT claims
-DROP POLICY IF EXISTS "Sovereign Match Access" ON public.matches;
-CREATE POLICY "Sovereign Match Access" ON public.matches
-FOR ALL TO authenticated
-USING (
-  ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'super_king')) OR
+-- Drop existing policies to avoid handshake conflicts.
+DROP POLICY IF EXISTS "Allow admins to insert matches" ON public.matches;
+DROP POLICY IF EXISTS "Allow admins to view matches" ON public.matches;
+DROP POLICY IF EXISTS "Allow admins to update matches" ON public.matches;
+DROP POLICY IF EXISTS "Allow SUPER_KING to delete matches" ON public.matches;
+DROP POLICY IF EXISTS "Allow global match visibility" ON public.matches;
+
+-- INSERT POLICY:
+-- Super Admins have global provisioning authority.
+-- Sub-Admins (Sector Officials) are locked to their assigned Node.
+CREATE POLICY "Allow admins to insert matches"
+ON public.matches
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
   (
-    ((auth.jwt() -> 'app_metadata' ->> 'role') = 'sub_admin') AND 
-    (school_arm::text = (auth.jwt() -> 'app_metadata' ->> 'school_arm'))
+    get_my_claim_text('role') = 'sub_admin' AND 
+    school_arm::text = get_my_claim_text('school_arm')
   )
 );
 
-DROP POLICY IF EXISTS "Global Match Read" ON public.matches;
-CREATE POLICY "Global Match Read" ON public.matches
-FOR SELECT TO authenticated
-USING (true);
-
--- 4. SECURE RESULTS POLICIES
-DROP POLICY IF EXISTS "Sovereign Results Access" ON public.event_results;
-CREATE POLICY "Sovereign Results Access" ON public.event_results
-FOR ALL TO authenticated
+-- SELECT POLICY:
+-- Controls visibility of match telemetry. 
+-- Note: Set to true if global visibility is required for public leaderboards.
+CREATE POLICY "Allow admins to view matches"
+ON public.matches
+FOR SELECT
+TO authenticated
 USING (
-  ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'super_king')) OR
+  (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
   (
-    ((auth.jwt() -> 'app_metadata' ->> 'role') = 'sub_admin') AND
-    EXISTS (
-      SELECT 1 FROM public.matches 
-      WHERE matches.id = event_results.match_id 
-      AND matches.school_arm::text = (auth.jwt() -> 'app_metadata' ->> 'school_arm')
-    )
+    get_my_claim_text('role') IN ('sub_admin', 'member') AND 
+    school_arm::text = get_my_claim_text('school_arm')
   )
 );
 
-DROP POLICY IF EXISTS "Global Results Read" ON public.event_results;
-CREATE POLICY "Global Results Read" ON public.event_results
-FOR SELECT TO authenticated
-USING (true);
+-- UPDATE POLICY:
+-- Prevents cross-sector data manipulation.
+CREATE POLICY "Allow admins to update matches"
+ON public.matches
+FOR UPDATE
+TO authenticated
+USING (
+  (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
+  (
+    get_my_claim_text('role') = 'sub_admin' AND 
+    school_arm::text = get_my_claim_text('school_arm')
+  )
+)
+WITH CHECK (
+  (get_my_claim_text('role') IN ('super_admin', 'super_king')) OR
+  (
+    get_my_claim_text('role') = 'sub_admin' AND 
+    school_arm::text = get_my_claim_text('school_arm')
+  )
+);
 
--- 5. ATOMIC SYSTEM PURGE (SUPER ADMIN ONLY)
+-- DELETE POLICY:
+-- Destructive operations restricted to High Command.
+CREATE POLICY "Allow SUPER_KING to delete matches"
+ON public.matches
+FOR DELETE
+TO authenticated
+USING (
+  get_my_claim_text('role') IN ('super_admin', 'super_king')
+);
+
+
+-- 4. SYSTEM KILL-SWITCH (SUPER ADMIN ONLY)
 CREATE OR REPLACE FUNCTION purge_all_data()
 RETURNS void AS $$
 BEGIN
-    IF (auth.jwt() -> 'app_metadata' ->> 'role') NOT IN ('super_admin', 'super_king') THEN
+    IF get_my_claim_text('role') NOT IN ('super_admin', 'super_king') THEN
         RAISE EXCEPTION 'UNAUTHORIZED_ACCESS: ARCHITECT_CLEARANCE_REQUIRED';
     END IF;
 

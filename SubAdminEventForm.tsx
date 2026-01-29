@@ -46,7 +46,7 @@ const SubAdminEventForm: React.FC<{ onEventCreated: (event: any) => void, admin:
 
     try {
       // ATOMIC UPLINK: AbortController and signals removed to resolve deployment timeouts
-      const result = await SovereignAPI.createEventForArm(payload, arm as SchoolArm);
+      const result = await SovereignAPI.createEventGlobal(payload);
       
       setStatus({ type: 'success', message: 'ESTABLISHED: Global Matrix synchronized.' });
       setTimeout(() => {
