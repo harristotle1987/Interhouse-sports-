@@ -36,6 +36,22 @@ export const SovereignAPI = {
     }
   },
 
+  async createEventForArm(payload: Partial<LiveMatch>, arm: SchoolArm) {
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .insert({ ...payload, school_arm: arm })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (err: any) {
+      console.error("ARM_PROVISION_FAULT:", err.message);
+      throw err;
+    }
+  },
+
   async createEventGlobal(payload: Partial<LiveMatch>) {
     try {
       // Standard async call - Removed Signal/AbortController
